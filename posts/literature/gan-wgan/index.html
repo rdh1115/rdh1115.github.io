@@ -7,7 +7,7 @@
 <meta name="robots" content="index, follow">
 <title>What is GAN and WGAN | rdh1115</title>
 <meta name="keywords" content="Generative Models, Literature Review">
-<meta name="description" content="A brief introduction to the mathematical concepts behind GAN and WGAN">
+<meta name="description" content="An introduction to the mathematical concepts behind GAN and WGAN">
 <meta name="author" content="Mark Bai">
 <link rel="canonical" href="https://rdh1115.github.io/posts/literature/gan-wgan/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fdc284e8bb37d457cb8ad90a4d6521985678fbc9839210c5c4e08ea1f6ea9c37.css" integrity="sha256-/cKE6Ls31FfLitkKTWUhmFZ4&#43;8mDkhDFxOCOofbqnDc=" rel="preload stylesheet" as="style">
@@ -102,19 +102,19 @@
       </script><meta property="og:url" content="https://rdh1115.github.io/posts/literature/gan-wgan/">
   <meta property="og:site_name" content="rdh1115">
   <meta property="og:title" content="What is GAN and WGAN">
-  <meta property="og:description" content="A brief introduction to the mathematical concepts behind GAN and WGAN">
+  <meta property="og:description" content="An introduction to the mathematical concepts behind GAN and WGAN">
   <meta property="og:locale" content="en">
   <meta property="og:type" content="article">
     <meta property="article:section" content="posts">
     <meta property="article:published_time" content="2024-12-17T00:00:00+00:00">
-    <meta property="article:modified_time" content="2024-12-26T18:15:50-05:00">
+    <meta property="article:modified_time" content="2024-12-17T00:00:00+00:00">
     <meta property="article:tag" content="Generative Models">
     <meta property="article:tag" content="Literature Review">
       <meta property="og:image" content="https://rdh1115.github.io/images/papermod-cover.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://rdh1115.github.io/images/papermod-cover.png">
 <meta name="twitter:title" content="What is GAN and WGAN">
-<meta name="twitter:description" content="A brief introduction to the mathematical concepts behind GAN and WGAN">
+<meta name="twitter:description" content="An introduction to the mathematical concepts behind GAN and WGAN">
 
 
 <script type="application/ld+json">
@@ -149,15 +149,15 @@
   "@type": "BlogPosting",
   "headline": "What is GAN and WGAN",
   "name": "What is GAN and WGAN",
-  "description": "A brief introduction to the mathematical concepts behind GAN and WGAN",
+  "description": "An introduction to the mathematical concepts behind GAN and WGAN",
   "keywords": [
     "Generative Models", "Literature Review"
   ],
-  "articleBody": "This post explores the theory and some follow-up papers of one of the most influential machine learning papers: Generative Adversarial Networks (GANs). Contrary to other deep learning models, I find that generative models are supported by more rigorous mathematics that are easily digestible.\nAs we understand the theory behind GANs, we will recognize its limitations and the reason behind its instability. This naturally leads us to Wasserstein Generative Adversarial Networks (WGANs), which apply useful concepts from Optimal Transport (OT).\nSince these papers are quite “old” by machine learning standards, there are many blog posts that already discuss them. The following is my own understanding plus some parts I find missing in other posts. A Kaggle notebook is also provided to show the algorithms learning on a toy example.\nGANs Cool History The story is that GAN was conceived at a bar in Montréal (Les 3 Brasseurs) by Ian Goodfellow during his Ph.D. studies. At the bar, he proposed GAN to his friends, but quickly faced skepticism.\nThe idea of jointly training a pair of networks against each other seemed too difficult when training just one network was difficult enough. Perhaps due to the influence of alcohol, he was still confident, so he headed home, coded up GAN, and produced amazing results on MNIST (a handwritten digit recognition dataset).\nAs of today, the seminal paper published in NeurIPS has over 75,000 citations, and has become a cornerstone in the field of unsupervised learning.\nGAN Architecture GANs learn the latent distribution of the unlabeled data through a pair of networks (the generator and the discriminator) that are competing against each other. An analogy is used in the original paper: the generator is a team of counterfeiters that produces fake currency, while the discriminator is the police trying to detect forgery. When both networks are optimal, the generator is able to produce counterfeit currency that is indistinguishable from the real ones.\nFigure 1: A GAN consists of two components: the discriminator $D$ outputs the probability that a given sample is real, and the generator $G$ produces synthetic samples given a latent variable $z$ sampled from the base distribution, e.g. $z \\sim \\mathcal{N}(0,1)$. The discriminator parameters $\\theta_d$ are updated to assigns high probability to real samples and low probability to synthetic samples, while the generator parameters $\\theta_g$ are updated to \"fool\" the discriminator into assigning high probabilities to the synthetic samples. First, let’s define $p_z, p_g, p_r$ as the probability distributions of the latent variable $z$, the generator, and real samples respectively.\nThe discriminator $D(x,\\theta_d)\\to [0, 1]$ outputs a scalar that represents the probability that $x$ came from $p_r$ rather than $p_g$. The generator $G(z, \\theta_g)$ then learns a mapping from $z$ to the data space. In other words, it is learning $p_g$ over data $x$, where $x\\sim p_r(x)$.\n$D$ is trained in a binary classification fashion. It maximizes the probability of assigning the correct label to both real samples $x$ and fake samples $x’ = G(z)$. This is equivalent to maximizing $$\\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D(x))\\right] +\\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D(G(z)))\\right].$$\nThe generator then minimizes the probability of the discriminator assigning the correct label to the fake samples: $$\\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D(G(z)))\\right].$$ In other words, they are playing a MinMax game with the following loss function: $$ \\begin{equation}\\label{eq: gan_loss} \\min_{G}\\max_{D} L(G, D) = \\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D(x))\\right] + \\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D(G(z)))\\right] \\end{equation} $$\nHow to train GANs Since the discriminator and the generator are playing a two-player non-cooperative game, training them can be difficult, and similar to finding the Nash equilibrium (Salimans et al., 2016).\nIn practice, this is traditionally done with the following pipeline: in each training loop, fix the generator and update the discriminator for $k$ steps, then fix the discriminator and update the generator for 1 step.\nTo update the discriminator, we fix the generator and isolate the $\\max_{D} L(G, D)$ part of Equation $\\eqref{eq: gan_loss}$: $$ \\begin{aligned} L(\\theta_d) \u0026 = \\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D(x, \\theta_d))\\right] + \\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D(G^*(z), \\theta_d))\\right] \\\\ \u0026 \\approx \\frac{1}{m}\\sum_{i=1}^m\\left[\\log (D(x_i, \\theta_d))\\right] + \\frac{1}{n}\\sum_{j=1}^n\\left[ \\log( 1 - D ( G^* (z_j), \\theta_d)) \\right], \\end{aligned} $$ where $m$ represents the number of real examples, $n$ represents the number of fake examples, and $G^*(z)$ represents the fixed generator.\nTo update the generator, we use the following loss function: $$ \\begin{aligned} L(\\theta_g) \u0026 = \\left(\\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D^*(x))\\right] + \\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D^*(G(z, \\theta_g)))\\right]\\right) \\\\ \u0026 \\approx \\frac{1}{n}\\sum_{j=1}^n\\left[ \\log ( 1 - D^* (G(z_j, \\theta_g)))\\right] \\end{aligned}. $$ Note that we remove the first term since it is not related to $G(z, \\theta_g)$.\nThe Optimal Discriminator and Generator It is intuitive that in theory, the perfect generator replicates the entire data space, in other words, $p_g = p_r$ (see proof below. It is natural then to think that the perfect discriminator can always differentiate between real and synthetic samples, however in theory, the best discriminator achieves random guessing.\nLil’Log provides a great breakdown on the math behind this. The general idea is that if we take the derivative of the discriminator’s loss function with a fixed generator, and set it to zero, $D^*(x) = \\frac{p_r(x)}{p_r(x)+p_g(x)}$. And since the perfect generator enables $p_g = p_r$, $D^*(x) = \\frac{1}{2}$.\nGiven $G^*(z, \\theta_g)$ such that $p_r = p_g$, and $D^*(x, \\theta_d)$ such that $D^*(x) = \\frac{1}{2}$, we can derive the global minimum of the loss function: $$ \\begin{aligned} L(G^*, D^*) \u0026= \\mathbb{E}_{x\\sim p_r(x)}\\left[-\\log2\\right] +\\mathbb{E}_{x\\sim p_g(x)}\\left[-\\log2)\\right]\\\\ \u0026= -2\\log2 \\end{aligned} $$ Thus, the best possible value of $L(G, D)$ is $-2\\log2$.\nTangent on KL \u0026 JS Divergence Kullback-Leibler (KL) divergence is one of the most commonly used measures in machine learning for comparing two probability distributions. Given distributions $p, q$, it measures how different $q$ is from $p$ with the following formulation: $$ KL(p\\Vert q) = \\int_{x}p(x)\\log\\frac{p(x)}{q(x)}dx. $$ Usually, $p$ is the true distribution, and $q$ is the model. The interpretation from information theory is that KL divergence measure the extra information gain (relative entropy) when switching from $q$ to $p$.\nThere are many limitations to KL divergence, one of the most being its asymmetry. If we explore the Wikipedia page for KL divergence, we will find that the Jensen-Shannon (JS) divergence addresses this issue by taking the KL from both sides of the mixture distribution: $$ JSD(p\\Vert q) = \\frac{1}{2}KL(p\\Vert\\frac{p+q}{2}) + \\frac{1}{2}KL(q\\Vert\\frac{p+q}{2}). $$\nWith this tool in hand, we can now prove that the perfect generator $p_g$ replicates the data space $p_r$. Recall that the optimal discriminator $D^*(x) = \\frac{p_r(x)}{p_r(x)+p_g(x)}$, if we plug this into Equation $\\eqref{eq: gan_loss}$, we get: $$ \\begin{aligned} L(G, D^{*}) \u0026= \\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D^*(x))\\right] + \\mathbb{E}_{x\\sim p_g(x)}\\left[\\log(1- D^*(x)\\right]\\\\ \u0026= \\int_{x}p_r(x)\\log\\left(\\frac{2\\cdot p_r(x)}{2\\cdot(p_r(x)+p_g(x))}\\right)dx\\\\ \u0026\\phantom{=} + \\int_{x}p_g(x)\\log\\left(\\frac{2\\cdot p_g(x)}{2\\cdot(p_r(x)+p_g(x))}\\right)dx\\\\ \u0026= -2\\log2 + \\int_{x}p_r(x)\\log\\left(\\frac{p_r(x)}{\\frac{p_r(x)+p_g(x)}{2}}\\right)dx\\\\ \u0026\\phantom{=} + \\int_{x}p_g(x)\\log\\left(\\frac{p_g(x)}{\\frac{p_r(x)+p_g(x)}{2}}\\right)dx\\\\ \u0026= -2\\log2 + KL(p_r\\Vert\\frac{p_r+p_g}{2}) + KL(p_g\\Vert\\frac{p_r+p_g}{2})\\\\ \u0026= -2\\log2 + 2JSD(p_r\\Vert p_g). \\end{aligned} $$ Thus, when the discriminator is optimal, the loss function is equivalent to measuring the difference between $p_g$ and $p_r$ with JS divergence. Also, when the generator is optimal, $p_r = p_g$, and $2JSD(p_r, p_g)=0$, so $L(G^*, D^*) = -2\\log2$, which is the global optimal.\nThe Real Cost Function ",
-  "wordCount" : "1155",
+  "articleBody": "This post explores the theory and some follow-up papers of one of the most influential machine learning papers: Generative Adversarial Networks (GANs). Contrary to other deep learning models, I find that generative models are supported by more rigorous mathematics that are easily digestible.\nAs we understand the theory behind GANs (mostly through the paper by Arjovsky and Bottou, 2017), we will recognize its limitations and the reason behind its instability. This naturally leads us to Wasserstein Generative Adversarial Networks (WGANs), which apply useful concepts from Optimal Transport (OT).\nSince these papers are quite “old” by machine learning standards, there are many blog posts that already discuss them. The following is my own understanding plus some parts I find missing in other posts. A Kaggle notebook is also provided to show the algorithms learning on a toy example.\nGANs Cool History The story is that GAN was conceived at a bar in Montréal (Les 3 Brasseurs) by Ian Goodfellow during his Ph.D. studies. At the bar, he proposed GAN to his friends, but quickly faced skepticism.\nThe idea of jointly training a pair of networks against each other seemed too difficult when training just one network was difficult enough. Perhaps due to the influence of alcohol, he was still confident, so he headed home, coded up GAN, and produced amazing results on MNIST (a handwritten digit recognition dataset).\nAs of today, the seminal paper published in NeurIPS has over 75,000 citations, and has become a cornerstone in the field of unsupervised learning.\nGAN Architecture (Goodfellow et al., 2014) GANs learn the latent distribution of the unlabeled data through a pair of networks (the generator and the discriminator) that are competing against each other. An analogy is used in the original paper: the generator is a team of counterfeiters that produces fake currency, while the discriminator is the police trying to detect forgery. When both networks are optimal, the generator is able to produce counterfeit currency that is indistinguishable from the real ones.\nFigure 1: A GAN consists of two components: the discriminator $D$ outputs the probability that a given sample is real, and the generator $G$ produces synthetic samples given a latent variable $z$ sampled from the base distribution, e.g. $z \\sim \\mathcal{N}(0,1)$. The discriminator parameters $\\theta_d$ are updated to assigns high probability to real samples and low probability to synthetic samples, while the generator parameters $\\theta_g$ are updated to \"fool\" the discriminator into assigning high probabilities to the synthetic samples. First, let’s define $p_z, p_g, p_r$ as the probability distributions of the latent variable $z$, the generator, and real samples respectively.\nThe discriminator $D(x,\\theta_d)\\to [0, 1]$ outputs a scalar that represents the probability that $x$ came from $p_r$ rather than $p_g$. The generator $G(z, \\theta_g)$ then learns a mapping from $z$ to the data space. In other words, it is learning $p_g$ over data $x$, where $x\\sim p_r(x)$.\n$D$ is trained in a binary classification fashion. It maximizes the probability of assigning the correct label to both real samples $x$ and fake samples $x’ = G(z)$. This is equivalent to maximizing $$\\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D(x))\\right] +\\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D(G(z)))\\right].$$\nThe generator then minimizes the probability of the discriminator assigning the correct label to the fake samples: $$\\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D(G(z)))\\right].$$ In other words, they are playing a MinMax game with the following loss function: $$ \\begin{equation}\\label{eq: gan_loss} \\min_{G}\\max_{D} L(G, D) = \\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D(x))\\right] + \\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D(G(z)))\\right] \\end{equation} $$\nHow to train GANs Since the discriminator and the generator are playing a two-player non-cooperative game, training them can be difficult, and similar to finding the Nash equilibrium (Salimans et al., 2016).\nIn practice, this is traditionally done with the following pipeline: in each training loop, fix the generator and update the discriminator for $k$ steps, then fix the discriminator and update the generator for 1 step.\nTo update the discriminator, we fix the generator and isolate the $\\max_{D} L(G, D)$ part of Equation $\\eqref{eq: gan_loss}$: $$ \\begin{aligned} L(\\theta_d) \u0026 = \\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D(x, \\theta_d))\\right] + \\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D(G^*(z), \\theta_d))\\right] \\\\ \u0026 \\approx \\frac{1}{m}\\sum_{i=1}^m\\left[\\log (D(x_i, \\theta_d))\\right] + \\frac{1}{n}\\sum_{j=1}^n\\left[ \\log( 1 - D ( G^* (z_j), \\theta_d)) \\right], \\end{aligned} $$ where $m$ represents the number of real examples, $n$ represents the number of fake examples, and $G^*(z)$ represents the fixed generator.\nTo update the generator, we use the following loss function: $$ \\begin{aligned} L(\\theta_g) \u0026 = \\left(\\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D^*(x))\\right] + \\mathbb{E}_{z\\sim p_z(z)}\\left[\\log(1- D^*(G(z, \\theta_g)))\\right]\\right) \\\\ \u0026 \\approx \\frac{1}{n}\\sum_{j=1}^n\\left[ \\log ( 1 - D^* (G(z_j, \\theta_g)))\\right] \\end{aligned}. $$ Note that we remove the first term since it is not related to $G(z, \\theta_g)$.\nThe Optimal Discriminator and Generator It is intuitive that in theory, the perfect generator replicates the entire data space, in other words, $p_g = p_r$ (see proof below). It is natural then to think that the perfect discriminator can always differentiate between real and synthetic samples, however in theory, the best discriminator achieves random guessing.\nLil’Log provides a great breakdown on the math behind this. The general idea is that if we take the derivative of the discriminator’s loss function with a fixed generator, and set it to zero, $D^*(x) = \\frac{p_r(x)}{p_r(x)+p_g(x)}$. And since the perfect generator enables $p_g = p_r$, $D^*(x) = \\frac{1}{2}$.\nGiven $G^*(z, \\theta_g)$ such that $p_r = p_g$, and $D^*(x, \\theta_d)$ such that $D^*(x) = \\frac{1}{2}$, we can derive the global minimum of the loss function: $$ \\begin{aligned} L(G^*, D^*) \u0026= \\mathbb{E}_{x\\sim p_r(x)}\\left[-\\log2\\right] +\\mathbb{E}_{x\\sim p_g(x)}\\left[-\\log2\\right]\\\\ \u0026= -2\\log2 \\end{aligned} $$ Thus, the best possible value of $L(G, D)$ is $-2\\log2$.\nTangent on KL \u0026 JS Divergence Kullback-Leibler (KL) divergence is one of the most commonly used measures in machine learning for comparing two probability distributions. Given distributions $p, q$, it measures how different $q$ is from $p$ with the following formulation: $$ KL(p\\Vert q) = \\int_{x}p(x)\\log\\frac{p(x)}{q(x)}dx. $$ Usually, $p$ is the true distribution, and $q$ is the model. The interpretation from information theory is that KL divergence measure the extra information gain (relative entropy) when switching from $q$ to $p$.\nThere are many limitations to KL divergence, one of the most being its asymmetry. If we explore the Wikipedia page for KL divergence, we will find that the Jensen-Shannon (JS) divergence addresses this issue by taking the KL from both sides of the mixture distribution: $$ JSD(p\\Vert q) = \\frac{1}{2}KL(p\\Vert\\frac{p+q}{2}) + \\frac{1}{2}KL(q\\Vert\\frac{p+q}{2}). $$\nWith this tool in hand, we can understand the loss function from a different perspective and prove that the perfect generator $p_g$ replicates the data space $p_r$. Recall that the optimal discriminator $D^*(x) = \\frac{p_r(x)}{p_r(x)+p_g(x)}$, if we plug this into Equation $\\eqref{eq: gan_loss}$, we get: $$ \\begin{aligned} L(G, D^{*}) \u0026= \\mathbb{E}_{x\\sim p_r(x)}\\left[\\log (D^*(x))\\right] + \\mathbb{E}_{x\\sim p_g(x)}\\left[\\log(1- D^*(x)\\right]\\\\ \u0026= \\int_{x}p_r(x)\\log\\left(\\frac{2\\cdot p_r(x)}{2\\cdot(p_r(x)+p_g(x))}\\right)dx\\\\ \u0026\\phantom{=} + \\int_{x}p_g(x)\\log\\left(\\frac{2\\cdot p_g(x)}{2\\cdot(p_r(x)+p_g(x))}\\right)dx\\\\ \u0026= -2\\log2 + \\int_{x}p_r(x)\\log\\left(\\frac{p_r(x)}{\\frac{p_r(x)+p_g(x)}{2}}\\right)dx\\\\ \u0026\\phantom{=} + \\int_{x}p_g(x)\\log\\left(\\frac{p_g(x)}{\\frac{p_r(x)+p_g(x)}{2}}\\right)dx\\\\ \u0026= -2\\log2 + KL(p_r\\Vert\\frac{p_r+p_g}{2}) + KL(p_g\\Vert\\frac{p_r+p_g}{2})\\\\ \u0026= -2\\log2 + 2JSD(p_r\\Vert p_g). \\end{aligned} $$ Thus, when the discriminator is optimal, the loss function is equivalent to measuring the difference between $p_g$ and $p_r$ with JS divergence. Also, when the generator is optimal, $p_r = p_g$, and $2JSD(p_r, p_g)=0$, so $L(G^*, D^*) = -2\\log2$, which is the global optimal.\nThe Real Cost Function (Arjovsky and Bottou, 2017) Figure 2: Low dimensional manifolds in high dimension space can hardly have overlaps. We have proved that the optimally trained discriminator should have a maximum cost of $-2\\log2+2JSD(p_r|p_g)$, and with the optimal generator, this cost goes to $-2\\log 2$. However, in practice, the training loss approaches $0$. This implies that $JSD(p_r|p_g)=\\log2$, and the JS-divergence between the two distributions is maxed out.\nThis is because the supports for $p_r$ and $p_g$ lie on low dimensional manifolds. To provide some intuition, consider the data space $\\mathcal{X}$ which contains all possible real-world images. Although the dimension of $\\mathcal{X}$ can be artificially high (e.g. $256\\times256\\times3$), there are pre-existing restrictions placed by nature. For instance, a mammal face usually contains eyes, ears, a nose, a mouth, and a jaw. Thus, the support of $p_r$ is concentrated on a low dimensional manifold. Similarly, since the generator $G(z, \\theta_g): \\mathcal{Z} \\to \\mathcal{X}$ estimates the data space by sampling from a prior distribution $p_z$ with less dimension (e.g. 100) than $\\mathcal{X}$, the support of $p_g$ is also on a low dimensional manifold.\nRecall that if $\\mathcal{X}: \\Omega\\to\\mathbb{R}^n$ is a random variable, then the support of $\\mathcal{X}$ is defined as the set $R_x = {x\\in\\mathbb{R}^n: p_r(x)\u003e0}$. For instance, the support of $p_g$ has to be contained in $G(z, \\theta_g)$. Denote $\\mathcal{M}$ as the manifold where the support of $p_r$ lies in, and $\\mathcal{P}$ the manifold where the support of $p_g$ lies in. It can be shown that\n",
+  "wordCount" : "1418",
   "inLanguage": "en",
   "image": "https://rdh1115.github.io/images/papermod-cover.png","datePublished": "2024-12-17T00:00:00Z",
-  "dateModified": "2024-12-26T18:15:50-05:00",
+  "dateModified": "2024-12-17T00:00:00Z",
   "author":{
     "@type": "Person",
     "name": "Mark Bai"
@@ -249,18 +249,18 @@
 <main class="main">
 
 <article class="post-single">
-  <header class="post-header">
-    <div class="breadcrumbs"><a href="https://rdh1115.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://rdh1115.github.io/posts/">Posts</a>&nbsp;»&nbsp;<a href="https://rdh1115.github.io/posts/literature/">Literature</a></div>
-    <h1 class="post-title entry-hint-parent">
-      What is GAN and WGAN
-    </h1>
-    <div class="post-description">
-      A brief introduction to the mathematical concepts behind GAN and WGAN
-    </div>
-    <div class="post-meta"><span title='2024-12-17 00:00:00 +0000 UTC'>December 17, 2024</span>&nbsp;·&nbsp;Estimated Reading Time: 30 min&nbsp;·&nbsp;Mark Bai
+    <header class="post-header">
+        <div class="breadcrumbs"><a href="https://rdh1115.github.io/">Home</a>&nbsp;»&nbsp;<a href="https://rdh1115.github.io/posts/">Posts</a>&nbsp;»&nbsp;<a href="https://rdh1115.github.io/posts/literature/">Literature</a></div>
+        <h1 class="post-title entry-hint-parent">
+            What is GAN and WGAN
+        </h1>
+        <div class="post-description">
+            An introduction to the mathematical concepts behind GAN and WGAN
+        </div>
+        <div class="post-meta"><span title='2024-12-17 00:00:00 +0000 UTC'>December 17, 2024</span>&nbsp;·&nbsp;Estimated Reading Time: 30 min&nbsp;·&nbsp;Mark Bai&nbsp;|&nbsp;<a href="https://github.com/rdh1115/rdh1115.github.io/issues/new" rel="noopener noreferrer" target="_blank">Suggest Changes</a>
 
 </div>
-  </header> <div class="toc">
+    </header> <div class="toc">
     <details >
         <summary accesskey="c" title="(Alt + C)">
             <span class="details">Table of Contents</span>
@@ -273,7 +273,7 @@
                 <li>
                     <a href="#cool-history" aria-label="Cool History">Cool History</a></li>
                 <li>
-                    <a href="#gan-architecture" aria-label="GAN Architecture">GAN Architecture</a></li>
+                    <a href="#gan-architecture-goodfellow-et-al-2014httpsproceedingsneuripsccpaper_filespaper2014file5ca3e9b122f61f8f06494c97b1afccf3-paperpdf" aria-label="GAN Architecture (Goodfellow et al., 2014)">GAN Architecture (Goodfellow et al., 2014)</a></li>
                 <li>
                     <a href="#how-to-train-gans" aria-label="How to train GANs">How to train GANs</a><ul>
                         
@@ -283,7 +283,7 @@
                     <a href="#tangent-on-kl--js-divergence" aria-label="Tangent on KL &amp; JS Divergence">Tangent on KL &amp; JS Divergence</a></li></ul>
                 </li>
                 <li>
-                    <a href="#the-real-cost-function" aria-label="The Real Cost Function">The Real Cost Function</a>
+                    <a href="#the-real-cost-function-arjovsky-and-bottou-2017httpsopenreviewnetpdfidhk4_qw5xe" aria-label="The Real Cost Function (Arjovsky and Bottou, 2017)">The Real Cost Function (Arjovsky and Bottou, 2017)</a>
                 </li>
             </ul>
             </li>
@@ -292,10 +292,11 @@
     </details>
 </div>
 
-  <div class="post-content"><p>This post explores the theory and some follow-up papers of  one of the most influential machine learning papers:
-<a href="https://arxiv.org/pdf/1406.2661">Generative Adversarial Networks</a> (GANs).
+    <div class="post-content"><p>This post explores the theory and some follow-up papers of  one of the most influential machine learning papers:
+<a href="https://proceedings.neurips.cc/paper_files/paper/2014/file/5ca3e9b122f61f8f06494c97b1afccf3-Paper.pdf">Generative Adversarial Networks</a> (GANs).
 Contrary to other deep learning models, I find that generative models are supported by more rigorous mathematics that are easily digestible.</p>
-<p>As we understand the theory behind GANs, we will recognize its limitations and the reason behind its instability.
+<p>As we understand the theory behind GANs (mostly through the paper by <a href="https://openreview.net/pdf?id=Hk4_qw5xe">Arjovsky and Bottou, 2017</a>),
+we will recognize its limitations and the reason behind its instability.
 This naturally leads us to
 <a href="https://arxiv.org/pdf/1701.07875">Wasserstein Generative Adversarial Networks</a> (WGANs),
 which apply useful concepts from <a href="https://en.wikipedia.org/wiki/Transportation_theory_%28mathematics%29">Optimal Transport</a> (OT).</p>
@@ -309,7 +310,7 @@ A Kaggle notebook is also provided to show the algorithms learning on a toy exam
 Perhaps due to the influence of alcohol, he was still confident, so he headed home, coded up GAN,
 and produced amazing results on <a href="https://yann.lecun.com/exdb/mnist/">MNIST</a> (a handwritten digit recognition dataset).</p>
 <p>As of today, the seminal paper published in NeurIPS has over 75,000 citations, and has become a cornerstone in the field of unsupervised learning.</p>
-<h3 id="gan-architecture">GAN Architecture<a hidden class="anchor" aria-hidden="true" href="#gan-architecture">#</a></h3>
+<h3 id="gan-architecture-goodfellow-et-al-2014httpsproceedingsneuripsccpaper_filespaper2014file5ca3e9b122f61f8f06494c97b1afccf3-paperpdf">GAN Architecture (<a href="https://proceedings.neurips.cc/paper_files/paper/2014/file/5ca3e9b122f61f8f06494c97b1afccf3-Paper.pdf">Goodfellow et al., 2014</a>)<a hidden class="anchor" aria-hidden="true" href="#gan-architecture-goodfellow-et-al-2014httpsproceedingsneuripsccpaper_filespaper2014file5ca3e9b122f61f8f06494c97b1afccf3-paperpdf">#</a></h3>
 <p>GANs learn the latent distribution of the unlabeled data through a pair of networks
 (the generator and the discriminator) that are competing against each other.
 An analogy is used in the original paper: the generator is a team of counterfeiters that produces fake currency,
@@ -317,7 +318,7 @@ while the discriminator is the police trying to detect forgery.
 When both networks are optimal, the generator is able to produce counterfeit currency that is indistinguishable from the
 real ones.</p>
 <figure style="text-align: center;">
-    <img src="/images/adversarial_net.png" alt="Alt text for the image" style="display: block; margin: 0 auto;" width="600">
+    <img src="./adversarial_net.png" alt="GAN architecture" style="display: block; margin: 0 auto;" width="600">
     <figcaption style="text-align: left; margin-top: 0.5rem;">Figure 1: A GAN consists of two components: 
     the discriminator $D$ outputs the probability that a given sample is real, 
     and the generator $G$ produces synthetic samples given a latent variable $z$ sampled from the base distribution, e.g. $z \sim \mathcal{N}(0,1)$. 
@@ -368,7 +369,7 @@ $$
 Note that we remove the first term since it is not related to $G(z, \theta_g)$.</p>
 <h4 id="the-optimal-discriminator-and-generator">The Optimal Discriminator and Generator<a hidden class="anchor" aria-hidden="true" href="#the-optimal-discriminator-and-generator">#</a></h4>
 <p>It is intuitive that in theory, the perfect generator replicates the entire data space,
-in other words, $p_g = p_r$ (see proof <a href="/posts/literature/gan-wgan/#tangent-on-kl--js-divergence">below</a>. It is natural then to think that the perfect discriminator can always differentiate between real and synthetic samples, however
+in other words, $p_g = p_r$ (see proof <a href="/posts/literature/gan-wgan/#tangent-on-kl--js-divergence">below</a>). It is natural then to think that the perfect discriminator can always differentiate between real and synthetic samples, however
 in theory, the best discriminator achieves random guessing.</p>
 <p>Lil&rsquo;Log provides a great breakdown on the <a href="https://lilianweng.github.io/posts/2017-08-20-gan/#what-is-the-optimal-value-for-d">math behind this</a>.
 The general idea is that if we take the derivative of the discriminator&rsquo;s loss function with a fixed generator, and set it to zero,
@@ -379,7 +380,7 @@ derive the global minimum of the loss function:
 $$
 \begin{aligned}
 L(G^*, D^*)
-&amp;= \mathbb{E}_{x\sim p_r(x)}\left[-\log2\right] +\mathbb{E}_{x\sim p_g(x)}\left[-\log2)\right]\\
+&amp;= \mathbb{E}_{x\sim p_r(x)}\left[-\log2\right] +\mathbb{E}_{x\sim p_g(x)}\left[-\log2\right]\\
 &amp;= -2\log2
 \end{aligned}
 $$
@@ -401,7 +402,8 @@ taking the KL from both sides of the mixture distribution:
 $$
 JSD(p\Vert q) = \frac{1}{2}KL(p\Vert\frac{p+q}{2}) + \frac{1}{2}KL(q\Vert\frac{p+q}{2}).
 $$</p>
-<p>With this tool in hand, we can now prove that the perfect generator $p_g$ replicates the data space $p_r$.
+<p>With this tool in hand, we can understand the loss function from a different perspective
+and prove that the perfect generator $p_g$ replicates the data space $p_r$.
 Recall that the optimal discriminator $D^*(x) = \frac{p_r(x)}{p_r(x)+p_g(x)}$, if we plug this into Equation $\eqref{eq: gan_loss}$, we get:
 $$
 \begin{aligned}
@@ -418,23 +420,64 @@ L(G, D^{*})
 $$
 Thus, when the discriminator is optimal, the loss function is equivalent to measuring the difference between $p_g$ and $p_r$ with JS divergence.
 Also, when the generator is optimal, $p_r = p_g$, and $2JSD(p_r, p_g)=0$, so $L(G^*, D^*) = -2\log2$, which is the global optimal.</p>
-<h3 id="the-real-cost-function">The Real Cost Function<a hidden class="anchor" aria-hidden="true" href="#the-real-cost-function">#</a></h3>
+<h3 id="the-real-cost-function-arjovsky-and-bottou-2017httpsopenreviewnetpdfidhk4_qw5xe">The Real Cost Function (<a href="https://openreview.net/pdf?id=Hk4_qw5xe">Arjovsky and Bottou, 2017</a>)<a hidden class="anchor" aria-hidden="true" href="#the-real-cost-function-arjovsky-and-bottou-2017httpsopenreviewnetpdfidhk4_qw5xe">#</a></h3>
+<figure style="text-align: center;">
+    <img src="./manifold.png" alt="Alt text for the image" style="display: block; margin: 0 auto;" width="600">
+    <figcaption style="text-align: left; margin-top: 0.5rem;">Figure 2: Low dimensional manifolds in 
+    high dimension space can hardly have overlaps.</figcaption>
+</figure>
+<p>We have proved that the optimally trained discriminator should have a maximum cost of $-2\log2+2JSD(p_r|p_g)$,
+and with the optimal generator, this cost goes to $-2\log 2$.
+However, in practice, <strong>the training loss approaches $0$</strong>.
+This implies that $JSD(p_r|p_g)=\log2$, and the JS-divergence between the two distributions is maxed out.</p>
+<p>This is because the supports for $p_r$ and $p_g$ lie on low dimensional manifolds.
+To provide some intuition, consider the data space $\mathcal{X}$ which contains all possible real-world images.
+Although the dimension of $\mathcal{X}$ can be artificially high (e.g. $256\times256\times3$),
+there are pre-existing restrictions placed by nature.
+For instance, a mammal face usually contains eyes, ears, a nose, a mouth, and a jaw.
+Thus, the support of $p_r$ is concentrated on a low dimensional manifold.
+Similarly, since the generator $G(z, \theta_g): \mathcal{Z} \to \mathcal{X}$ estimates the data space by sampling from a prior distribution $p_z$
+with less dimension (e.g. 100) than $\mathcal{X}$, the support of $p_g$ is also on a low dimensional manifold.</p>
+<p>Recall that if $\mathcal{X}: \Omega\to\mathbb{R}^n$ is a random variable, then the support of $\mathcal{X}$ is defined as the set $R_x = {x\in\mathbb{R}^n: p_r(x)&gt;0}$.
+For instance, the support of $p_g$ has to be contained in $G(z, \theta_g)$.
+Denote $\mathcal{M}$ as the manifold where the support of $p_r$ lies in, and $\mathcal{P}$ the manifold where the support of $p_g$ lies in.
+It can be shown that</p>
 
 
-  </div>
+    </div>
 
-  <footer class="post-footer">
-    <ul class="post-tags">
-      <li><a href="https://rdh1115.github.io/tags/generative-models/">Generative Models</a></li>
-      <li><a href="https://rdh1115.github.io/tags/literature-review/">Literature Review</a></li>
-    </ul>
+    <footer class="post-footer">
+        <ul class="post-tags">
+            <li><a href="https://rdh1115.github.io/tags/generative-models/">Generative Models</a></li>
+            <li><a href="https://rdh1115.github.io/tags/literature-review/">Literature Review</a></li>
+        </ul>
 
-  </footer>
+    </footer>
+    <div id="disqus_thread"></div>
+<script>
+    window.disqus_config = function () {
+    
+    
+    
+    };
+    (function() {
+        if (["localhost", "127.0.0.1"].indexOf(window.location.hostname) != -1) {
+            document.getElementById('disqus_thread').innerHTML = 'Disqus comments not available by default when the website is previewed locally.';
+            return;
+        }
+        var d = document, s = d.createElement('script'); s.async = true;
+        s.src = '//' + "disqus_DRPP6BipAr" + '.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="https://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
 </article>
     </main>
     
 <footer class="footer">
-        <span>© 2024 Mark Bai</span> · 
+        <span>© 2025 Mark Bai</span> · 
 
     <span>
         Powered by
