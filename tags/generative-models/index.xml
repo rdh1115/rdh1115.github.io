@@ -10,11 +10,11 @@
     <lastBuildDate>Thu, 16 Jan 2025 17:14:20 -0500</lastBuildDate>
     <atom:link href="https://rdh1115.github.io/tags/generative-models/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>What is GAN and WGAN</title>
+      <title>The Story behind WGAN</title>
       <link>https://rdh1115.github.io/posts/literature/gan-wgan/</link>
-      <pubDate>Tue, 17 Dec 2024 00:00:00 +0000</pubDate>
+      <pubDate>Tue, 21 Jan 2025 00:00:00 +0000</pubDate>
       <guid>https://rdh1115.github.io/posts/literature/gan-wgan/</guid>
-      <description>An introduction to the mathematical concepts behind GAN and WGAN</description>
+      <description>An introduction to GAN and WGAN (code examples included).</description>
     </item>
   </channel>
 </rss>
